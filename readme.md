@@ -14,6 +14,13 @@ pip install -U anarchy_bot
 python -m anarchy_bot
 ```
 
+## testing
+
+```bash
+pip install -U pytest
+pytest
+```
+
 ## translate to your language
 
 - fork this repo
