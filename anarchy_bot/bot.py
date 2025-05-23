@@ -170,6 +170,20 @@ class Votes:
         self.initiator: User = initiator
         self.msg_to_edit: Message | None = None
         self.client: Client = client
+        self._lock = asyncio.Lock()
+
+    async def _safe_edit(self, **kwargs) -> None:
+        if not self.msg_to_edit:
+            raise ValueError
+        try:
+            await self.msg_to_edit.edit(**kwargs)
+        except pyrogram.errors.FloodWait as e:
+            await asyncio.sleep(e.value)
+            await self.msg_to_edit.edit(**kwargs)
+        except pyrogram.errors.MessageNotModified:
+            pass
+        except Exception as e:
+            print(f'failed to edit mute vote message: {e}')
 
     async def vote_minus(
         self,
@@ -207,10 +221,8 @@ class Votes:
         if not self.msg_to_edit:
             raise ValueError
         updated = await self.get_updated_message()
-        try:
-            await self.msg_to_edit.edit(**updated)
-        except:
-            pass
+        async with self._lock:
+            await self._safe_edit(**updated)
 
     async def reply(
         self,
@@ -229,22 +241,23 @@ class Votes:
             user_to_mute=self.user_to_mute,
         )
         count = len(self.plus_dict) - len(self.minus_dict)
-        if count >= 2:
-            minutes = count * 30
-            await perms.mute_and_edit(
-                text=f'{mention(self.user_to_mute)} was muted for {minutes} minutes' + self.get_voters(),
-                client=self.client,
-                msg_to_edit=self.msg_to_edit,
-                until_date=datetime.datetime.now() + datetime.timedelta(
-                    minutes = minutes,
-                ),
-            )
-        else:
-            await perms.unmute_and_edit(
-                text=f'{mention(self.user_to_mute)} was unmuted, mute votes must exceed unmute by 2 for successfull mute' + self.get_voters(),
-                client=self.client,
-                msg_to_edit=self.msg_to_edit,
-            )
+        async with self._lock:
+            if count >= 2:
+                minutes = count * 30
+                await perms.mute_and_edit(
+                    text=f'{mention(self.user_to_mute)} was muted for {minutes} minutes' + self.get_voters(),
+                    client=self.client,
+                    msg_to_edit=self.msg_to_edit,
+                    until_date=datetime.datetime.now() + datetime.timedelta(
+                        minutes = minutes,
+                    ),
+                )
+            else:
+                await perms.unmute_and_edit(
+                    text=f'{mention(self.user_to_mute)} was unmuted, mute votes must exceed unmute by 2 for successfull mute' + self.get_voters(),
+                    client=self.client,
+                    msg_to_edit=self.msg_to_edit,
+                )
 
         chat_id = self.msg_to_edit.chat.id
         messages_dict = chats.mute_votes.get(chat_id)
@@ -594,11 +607,10 @@ async def mute_done_button(
             'channels and chats can\'t press this button'
         )
         return
-    permitted = cb.message.reply_to_message.from_user
-    if cb.from_user.id != permitted.id:
-        await cb.answer(f'this button for {mention_nolink(permitted)}')
-        return
     votes = await get_votes_from_cb(cb)
+    if cb.from_user.id != votes.initiator.id:
+        await cb.answer(f'this button for {mention_nolink(votes.initiator)}')
+        return
     await votes.done()
 
 
