@@ -607,10 +607,11 @@ async def mute_done_button(
             'channels and chats can\'t press this button'
         )
         return
-    votes = await get_votes_from_cb(cb)
-    if cb.from_user.id != votes.initiator.id:
-        await cb.answer(f'this button for {mention_nolink(votes.initiator)}')
+    permitted = cb.message.reply_to_message.from_user
+    if cb.from_user.id != permitted.id:
+        await cb.answer(f'this button for {mention_nolink(permitted)}')
         return
+    votes = await get_votes_from_cb(cb)
     await votes.done()
 
 
