@@ -219,7 +219,7 @@ class Votes:
         self,
     ):
         if not self.msg_to_edit:
-            raise ValueError
+            return
         updated = await self.get_updated_message()
         async with self._lock:
             await self._safe_edit(**updated)
@@ -235,13 +235,20 @@ class Votes:
         self,
     ):
         if not self.msg_to_edit:
-            raise ValueError
+            return
         perms = Perms(
             initiator=self.initiator,
             user_to_mute=self.user_to_mute,
         )
         count = len(self.plus_dict) - len(self.minus_dict)
         async with self._lock:
+            chat_id = self.msg_to_edit.chat.id
+            messages_dict = chats.mute_votes.get(chat_id)
+            if messages_dict is not None:
+                messages_dict.pop(
+                    self.user_to_mute.id,
+                    None,
+                )
             if count >= 2:
                 minutes = count * 30
                 await perms.mute_and_edit(
@@ -258,18 +265,8 @@ class Votes:
                     client=self.client,
                     msg_to_edit=self.msg_to_edit,
                 )
-
-        chat_id = self.msg_to_edit.chat.id
-        messages_dict = chats.mute_votes.get(chat_id)
-        if messages_dict is None:
-            keys = list(chats.mute_votes.keys())
-            raise KeyError(
-                f'can not get {chat_id} from {keys}'
-            )
-        messages_dict.pop(
-            self.user_to_mute.id,
-            None,
-        )
+            # prevent future edits
+            self.msg_to_edit = None
 
     def get_voters(
         self,
