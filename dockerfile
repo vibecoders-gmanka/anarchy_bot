@@ -1,5 +1,7 @@
 FROM ghcr.io/astral-sh/uv:python3.12-alpine AS builder
 
+RUN apk add --no-cache build-base
+
 WORKDIR /app
 
 COPY pyproject.toml uv.lock /app
