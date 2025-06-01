@@ -1,0 +1,17 @@
+[project]
+name = "anarchy-bot"
+version = "0.1.0"
+description = "Add your description here"
+readme = "readme.md"
+requires-python = ">=3.12"
+dependencies = [
+    "gmanka-yml>=23.0.5",
+    "pyrogram>=2.0.106",
+    "rich>=14.0.0",
+    "tgcrypto>=1.2.5",
+    "uvloop>=0.21.0",
+]
+
+[tool.pyright]
+venvPath = '.'
+venv = '.venv'
