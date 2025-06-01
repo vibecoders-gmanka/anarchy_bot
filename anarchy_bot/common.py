@@ -411,9 +411,7 @@ def mention_nolink(
 async def bad_button(
     cb: CallbackQuery,
 ) -> None:
-    await cb.answer(
-        text = t('bad_button_cb', cb),
-    )
+    await cb.answer()
 
 
 async def cb_bugreport(
